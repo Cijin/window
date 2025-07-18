@@ -1,63 +1,43 @@
 const std = @import("std");
+const stdout = std.io.getStdOut().writer();
 
-// X11 C bindings
-const c = @cImport({
-    @cInclude("X11/Xlib.h");
-});
-
-pub fn createBlankWindow() !void {
-    // Open connection to X server
-    const display = c.XOpenDisplay(null);
-    if (display == null) {
-        std.log.err("Cannot open X display", .{});
-        return error.CannotOpenDisplay;
-    }
-    defer _ = c.XCloseDisplay(display);
-
-    const screen = c.XDefaultScreen(display);
-    const root = c.XRootWindow(display, screen);
-
-    // Create a simple window
-    const window = c.XCreateSimpleWindow(display, root, 10, 10, // x, y position
-        400, 300, // width, height
-        1, // border width
-        c.XBlackPixel(display, screen), // border color
-        c.XWhitePixel(display, screen) // background color
-    );
-
-    // Set window title
-    _ = c.XStoreName(display, window, "Blank Window");
-
-    // Select input events we want to receive
-    _ = c.XSelectInput(display, window, c.ExposureMask | c.KeyPressMask);
-
-    // Make the window visible
-    _ = c.XMapWindow(display, window);
-
-    std.log.info("Blank window created! Press any key to close it.", .{});
-
-    // Event loop
-    var event: c.XEvent = undefined;
-    while (true) {
-        _ = c.XNextEvent(display, &event);
-
-        switch (event.type) {
-            c.Expose => {
-                // Window needs to be redrawn (already blank)
-            },
-            c.KeyPress => {
-                // Any key press closes the window
-                break;
-            },
-            else => {},
-        }
-    }
-
-    _ = c.XDestroyWindow(display, window);
-}
+const clear_and_reset = "\x1B[2J\x1B[H";
+const toggle_cursor = "\x1B[?25l";
+const w = 60;
+const h = 20;
+const hundred_ms = 100 * 1_000_000;
 
 pub fn main() !void {
-    std.log.info("Creating a blank window...", .{});
-    try createBlankWindow();
-    std.log.info("Window closed.", .{});
+    var x: i32 = 0;
+    var dx: i32 = 1;
+    var y: i32 = 0;
+    var dy: i32 = 1;
+
+    try stdout.print(toggle_cursor, .{});
+
+    while (true) {
+        try stdout.print(clear_and_reset, .{});
+
+        var row: i32 = 0;
+        while (row < h) : (row += 1) {
+            var col: i32 = 0;
+            while (col < w) : (col += 1) {
+                if (row == y and col == x) {
+                    try stdout.print("O", .{});
+                    continue;
+                }
+
+                try stdout.print(" ", .{});
+            }
+            try stdout.print("\n", .{});
+        }
+
+        x += dx;
+        y += dy;
+
+        if (x <= 0 or x >= w - 1) dx = -dx;
+        if (y <= 0 or y >= h - 1) dy = -dy;
+
+        std.time.sleep(hundred_ms);
+    }
 }

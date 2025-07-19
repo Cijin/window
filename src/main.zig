@@ -5,7 +5,7 @@ const clear_and_reset = "\x1B[2J\x1B[H";
 const toggle_cursor = "\x1B[?25l";
 const w = 60;
 const h = 20;
-const hundred_ms = 100 * 1_000_000;
+const sleep_time = 100 * 1_000_000;
 
 pub fn main() !void {
     var x: i32 = 0;
@@ -23,7 +23,7 @@ pub fn main() !void {
             var col: i32 = 0;
             while (col < w) : (col += 1) {
                 if (row == y and col == x) {
-                    try stdout.print("O", .{});
+                    try stdout.print("0", .{});
                     continue;
                 }
 
@@ -35,9 +35,14 @@ pub fn main() !void {
         x += dx;
         y += dy;
 
-        if (x <= 0 or x >= w - 1) dx = -dx;
-        if (y <= 0 or y >= h - 1) dy = -dy;
+        if (x >= w - 1 or x <= 0) {
+            dx = -dx;
+        }
 
-        std.time.sleep(hundred_ms);
+        if (y >= h - 1 or y <= 0) {
+            dy = -dy;
+        }
+
+        std.time.sleep(sleep_time);
     }
 }
